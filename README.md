@@ -49,6 +49,7 @@ The script will:
    - n8n API Key *(generated in n8n UI → Settings → API)*
    - Telegram Bot Token
    - Telegram Chat ID
+   - Anthropic API Key
    - Domain name *(optional — enables HTTPS via Let's Encrypt + nginx)*
 5. **Configure your agent's personality**:
    - Agent name
@@ -77,7 +78,7 @@ The easiest way is to open each workflow and click **"Create new credential"** d
 |---|---|---|
 | Postgres | `Supabase Postgres` | Agent (Load Soul, Load History, etc.) |
 | Anthropic API | `Anthropic API` | Agent (Claude node), MCP Builder |
-| Telegram Bot | `Telegram Bot` | Agent (Telegram Trigger + Reply) |
+| Telegram Bot | `Telegram Bot` | Agent (Telegram Trigger + Reply) — *created automatically by setup* |
 
 **Postgres connection details** *(shown in setup output)*:
 - Host: `db` | Port: `5432` | DB: `postgres` | User: `postgres`
@@ -96,13 +97,13 @@ The easiest way is to open each workflow and click **"Create new credential"** d
 - Get a free key at [brave.com/search/api](https://brave.com/search/api/) (free tier: 2,000 queries/month)
 - Without this key, the MCP Builder cannot find API docs automatically — you'd need to paste docs manually into the prompt
 
-### Step 3 — Activate all workflows
+### Step 3 — Activate remaining workflows
 
-In n8n UI, toggle **all** of these on:
+The main agent is activated automatically by setup. In n8n UI, toggle the remaining workflows on:
 
 | Workflow | Purpose |
 |---|---|
-| 🤖 n8n-claw Agent | Main agent — receives and responds to Telegram messages |
+| 🤖 n8n-claw Agent | Main agent *(activated by setup)* |
 | 🏗️ MCP Builder | Builds new MCP Server workflows on demand |
 | 🔌 MCP Client | Calls tools on MCP Servers (sub-workflow) |
 | ⏰ ReminderFactory | Creates timed Telegram reminders |
@@ -155,7 +156,7 @@ The MCP Builder will:
 
 ## Customization
 
-Edit the `soul` and `agents` tables directly in Supabase Studio (`http://YOUR-IP:3001`) to change your agent's personality, tools, and behavior — no code changes needed.
+Edit the `soul` and `agents` tables directly in Supabase Studio (`http://localhost:3001` via [SSH tunnel](#accessing-supabase-studio)) to change your agent's personality, tools, and behavior — no code changes needed.
 
 | Table | Contents |
 |---|---|
@@ -214,7 +215,7 @@ This re-runs the full setup wizard while keeping your existing data and credenti
 → Check all workflows are **activated** in n8n UI
 
 **"Credential does not exist" error?**
-→ Add the Postgres credential manually (see Step 3)
+→ Add the Postgres credential manually (see Step 2)
 
 **MCP Builder fails?**
 → Make sure the LLM node in MCP Builder has Anthropic API selected
