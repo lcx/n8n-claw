@@ -649,17 +649,31 @@ fi
 if [ "$INSTALL_MODE" = "update" ] && [ "$FORCE_FLAG" != "--force" ]; then
   echo -e "\n${GREEN}🧙 Skipping personalization (update mode — use --force to reconfigure)${NC}"
 else
+
+# Load existing personalization as defaults (for --force reconfiguration)
+EXISTING_BOT_NAME=$(LANG=C LC_ALL=C PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -d postgres -t -c \
+  "SELECT content FROM soul WHERE key='name' LIMIT 1" 2>/dev/null | xargs)
+EXISTING_USER=$(LANG=C LC_ALL=C PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -d postgres -t -c \
+  "SELECT display_name FROM user_profiles LIMIT 1" 2>/dev/null | xargs)
+EXISTING_TZ=$(LANG=C LC_ALL=C PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -d postgres -t -c \
+  "SELECT timezone FROM user_profiles LIMIT 1" 2>/dev/null | xargs)
+EXISTING_CTX=$(LANG=C LC_ALL=C PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -d postgres -t -c \
+  "SELECT context FROM user_profiles LIMIT 1" 2>/dev/null | xargs)
+
 echo -e "\n${GREEN}🧙 Personalization setup${NC}"
 echo "────────────────────────────"
 echo "Let's configure your agent's personality."
+if [ -n "$EXISTING_BOT_NAME" ]; then
+  echo "  (Press Enter to keep current values)"
+fi
 echo ""
 
-BOT_NAME=$(cli_ask "Agent name" "Assistant")
-USER_DISPLAY=$(cli_ask "Your name" "User")
-LANG=$(cli_ask "Preferred language" "English")
-CTX=$(cli_ask "What will you use this agent for" "Personal assistant and automation")
 SYS_TZ=$(timedatectl show --property=Timezone --value 2>/dev/null || cat /etc/timezone 2>/dev/null || echo "UTC")
-TIMEZONE=$(cli_ask "Timezone" "$SYS_TZ")
+BOT_NAME=$(cli_ask "Agent name" "${EXISTING_BOT_NAME:-Assistant}")
+USER_DISPLAY=$(cli_ask "Your name" "${EXISTING_USER:-User}")
+LANG=$(cli_ask "Preferred language" "English")
+CTX=$(cli_ask "What will you use this agent for" "${EXISTING_CTX:-Personal assistant and automation}")
+TIMEZONE=$(cli_ask "Timezone" "${EXISTING_TZ:-$SYS_TZ}")
 
 echo ""
 echo "  Communication style:"
@@ -698,8 +712,14 @@ echo ""
 echo -e "${GREEN}🧠 RAG / Vector Memory (optional)${NC}"
 echo "  For semantic memory search, provide an embedding API key."
 echo "  Supported providers: openai (default), voyage, ollama"
-echo "  Leave empty to skip — keyword search will be used instead."
-read -rp "  Embedding API Key [skip]: " EMBEDDING_API_KEY_INPUT
+if [ -n "$EMBEDDING_API_KEY" ]; then
+  echo "  Current key: ${EMBEDDING_API_KEY:0:8}...  (Enter to keep, or enter new key)"
+  read -rp "  Embedding API Key [keep]: " EMBEDDING_API_KEY_INPUT
+  [ -z "$EMBEDDING_API_KEY_INPUT" ] && EMBEDDING_API_KEY_INPUT="$EMBEDDING_API_KEY"
+else
+  echo "  Leave empty to skip — keyword search will be used instead."
+  read -rp "  Embedding API Key [skip]: " EMBEDDING_API_KEY_INPUT
+fi
 if [ -n "$EMBEDDING_API_KEY_INPUT" ]; then
   EMBEDDING_API_KEY="$EMBEDDING_API_KEY_INPUT"
   EMBEDDING_PROVIDER=$(cli_ask "Embedding provider" "openai")
