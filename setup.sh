@@ -951,6 +951,12 @@ HTTP (http_request):
 
   ('task_management', 'You can manage tasks for the user via the Task Manager tool.
 
+IMPORTANT - REMINDERS AND TASKS:
+- When the user says "remind me to..." or "don''t forget...", ALWAYS do BOTH:
+  1. Create a Reminder (timed Telegram notification)
+  2. Create a Task via Task Manager (so it shows up in task lists and briefings)
+- This ensures nothing falls through the cracks.
+
 WHEN TO CREATE TASKS:
 - User says "remind me to...", "I need to...", "add a task...", "don''t forget..."
 - User mentions a deadline or to-do item in conversation
