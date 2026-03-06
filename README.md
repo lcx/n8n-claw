@@ -4,12 +4,15 @@ A fully self-hosted AI agent built on n8n + PostgreSQL + Claude. Talks to you vi
 
 ## What it does
 
+Talk to your agent in natural language — it manages tasks, remembers context across conversations, builds API integrations, and proactively keeps you on track.
+
 - **Telegram chat** — talk to your AI agent directly via Telegram
-- **Long-term memory** — remembers conversations and important context in PostgreSQL with optional vector search (RAG)
+- **Long-term memory** — remembers conversations and important context with optional semantic search (RAG)
 - **Task management** — create, track, and complete tasks with priorities and due dates
-- **Proactive heartbeat** — automatically reminds you of overdue/urgent tasks and sends a daily morning briefing
+- **Proactive heartbeat** — automatically reminds you of overdue/urgent tasks
+- **Morning briefing** — daily summary of your tasks at a time you choose
 - **MCP Server Builder** — builds new API integrations on demand (just ask: *"build me an MCP server for the GitHub API"*)
-- **Smart reminders** — timed Telegram reminders
+- **Smart reminders** — timed Telegram reminders ("remind me in 2 hours to...")
 - **Extensible** — add new tools and capabilities through natural language
 
 ## Architecture
@@ -18,13 +21,17 @@ A fully self-hosted AI agent built on n8n + PostgreSQL + Claude. Talks to you vi
 Telegram
   ↓
 n8n-claw Agent (Claude Sonnet)
-  ├── Task Manager (create, track, complete tasks)
-  ├── Memory Save/Search (PostgreSQL + vector embeddings)
-  ├── Memory Consolidation (daily RAG pipeline)
-  ├── Heartbeat (proactive reminders + morning briefing)
-  ├── MCP Client → MCP Servers (n8n workflows)
-  ├── MCP Builder → creates new MCP Servers automatically
-  └── Reminder Factory
+  ├── Task Manager        — create, track, complete tasks
+  ├── Memory Save/Search  — long-term memory with vector search
+  ├── MCP Client          → calls tools on MCP Servers
+  ├── MCP Builder          → creates new MCP Servers automatically
+  ├── Reminder Factory    — timed Telegram reminders
+  ├── HTTP Tool           — simple web requests
+  └── Self Modify         — inspect/list n8n workflows
+
+Background Workflows (automated):
+  💓 Heartbeat              — every 15 min: proactive reminders + morning briefing
+  🧠 Memory Consolidation   — daily at 3am: summarizes conversations → long-term memory
 ```
 
 ---
@@ -114,18 +121,28 @@ Without an embedding key, the agent still works — it falls back to keyword-bas
 
 ### Step 3 — Activate remaining workflows
 
-The main agent is activated automatically by setup. In n8n UI, toggle the remaining workflows on:
+These workflows are **activated automatically** by setup — no action needed:
 
 | Workflow | Purpose |
 |---|---|
-| 🤖 n8n-claw Agent | Main agent *(activated by setup)* |
-| 💓 Heartbeat | Proactive reminders + morning briefing *(activated by setup)* |
-| 🧠 Memory Consolidation | Daily RAG pipeline — summarizes conversations into vector memory *(activated by setup)* |
+| 🤖 n8n-claw Agent | Main agent — receives Telegram messages, calls tools |
+| 💓 Heartbeat | Background: proactive reminders + morning briefing (every 15 min) |
+| 🧠 Memory Consolidation | Background: summarizes conversations into long-term memory (daily 3am) |
+
+These workflows need to be **activated manually** in n8n UI:
+
+| Workflow | Purpose |
+|---|---|
 | 🏗️ MCP Builder | Builds new MCP Server workflows on demand |
-| 🔌 MCP Client | Calls tools on MCP Servers (sub-workflow) |
-| ⏰ ReminderFactory | Creates timed Telegram reminders |
+| ⏰ ReminderFactory | Creates timed Telegram reminders (sub-workflow) |
 | 🌤️ MCP: Weather | Example MCP Server — weather via Open-Meteo (no API key) |
-| ⚙️ WorkflowBuilder | Builds general n8n automations |
+| ⚙️ WorkflowBuilder | Builds general n8n automations *(optional — requires [extra setup](#optional-workflowbuilder-with-claude-code))* |
+
+Sub-workflows (called by other workflows, no manual activation needed):
+
+| Workflow | Called by |
+|---|---|
+| 🔌 MCP Client | Agent — calls tools on MCP Servers |
 
 ### Step 4 — Start chatting
 
@@ -171,6 +188,26 @@ The MCP Builder will:
 
 ---
 
+## Memory
+
+The agent has a multi-layered memory system — it remembers things you tell it and learns from your conversations over time.
+
+**Automatic memory:** The agent decides on its own what's worth remembering from your conversations (preferences, facts about you, decisions). No action needed.
+
+**Manual memory:** You can also explicitly ask it to remember something:
+
+> "Remember that I prefer morning meetings before 10am"
+> "Merk dir, dass ich Kaffee schwarz trinke"
+
+**Memory search:** When relevant, the agent searches its memory to give you contextual answers. With an embedding API key (configured during setup), it uses semantic search — finding memories by meaning, not just keywords.
+
+> "What do you know about my coffee preferences?"
+> "What did we discuss about the server migration?"
+
+**Memory Consolidation** runs automatically every night at 3am. It summarizes the day's conversations into concise long-term memories with vector embeddings. This keeps the memory efficient and searchable. Requires an embedding API key (OpenAI, Voyage AI, or Ollama — configured during setup).
+
+---
+
 ## Task Management
 
 The agent can manage tasks for you — just tell it what you need in natural language.
@@ -191,6 +228,18 @@ The agent can manage tasks for you — just tell it what you need in natural lan
 > "Change the presentation priority to urgent"
 
 Tasks support priorities (`low`, `medium`, `high`, `urgent`), due dates, and subtasks.
+
+---
+
+## Reminders
+
+The agent can set timed reminders that arrive as Telegram messages at the specified time.
+
+> "Remind me in 30 minutes to check the oven"
+> "Erinner mich morgen um 9 an den Arzttermin"
+> "Set a reminder for Friday at 3pm: submit the report"
+
+Each reminder creates a temporary n8n workflow that fires once at the scheduled time, sends the Telegram message, and deletes itself.
 
 ---
 
@@ -220,14 +269,16 @@ Edit the `soul` and `agents` tables directly in Supabase Studio (`http://localho
 
 | Table | Contents |
 |---|---|
-| `soul` | Agent personality (name, persona, vibe, language, boundaries) |
-| `agents` | Tool instructions, MCP config, memory behavior, user context |
+| `soul` | Agent personality (name, persona, vibe, boundaries) — loaded into system prompt |
+| `agents` | Tool instructions, MCP config, memory behavior — loaded into system prompt |
 | `user_profiles` | User name, timezone, preferences (language, morning briefing) |
 | `tasks` | Task management (title, status, priority, due date, subtasks) |
-| `heartbeat_config` | Heartbeat + morning briefing settings |
-| `mcp_registry` | Available MCP servers |
-| `conversations` | Chat history |
-| `memory_long` | Long-term memory with semantic search |
+| `heartbeat_config` | Heartbeat + morning briefing settings (enabled, last_run, intervals) |
+| `tools_config` | API keys for Anthropic, embedding provider — used by Heartbeat + Consolidation |
+| `mcp_registry` | Available MCP servers (name, URL, tools) |
+| `conversations` | Full chat history (session-based) |
+| `memory_long` | Long-term memory with vector embeddings (semantic search) |
+| `memory_daily` | Daily interaction log (used by Memory Consolidation) |
 
 ---
 
@@ -253,21 +304,19 @@ Re-run `setup.sh` at any time to update:
 cd n8n-claw && ./setup.sh
 ```
 
-In update mode, the script will:
-- **Auto-update from git** (`git pull --ff-only`) — falls back gracefully if there are local changes
-- **Pull latest Docker images** (n8n, PostgreSQL, etc.)
-- **Restart all services** with the new images
-- **Preserve your encryption key** — automatically recovered from the existing volume
-- **Skip personalization** — your agent's name, personality, and timezone are kept
-- **Skip credential creation and workflow import** — nothing is duplicated
+**Normal update** — pulls code + Docker images, restarts services. Your personality, credentials, and data are preserved:
 
-To **reconfigure** your agent's personality, timezone, or other settings:
+```bash
+cd n8n-claw && ./setup.sh
+```
+
+**Full reconfigure** — re-runs the setup wizard (personality, language, timezone, proactive/reactive, embedding key). Your existing data and credentials are kept, but you can change all settings:
 
 ```bash
 ./setup.sh --force
 ```
 
-This re-runs the full setup wizard while keeping your existing data and credentials.
+Use `--force` when you want to change your agent's name, language, communication style, or switch between proactive/reactive mode.
 
 ---
 
@@ -284,6 +333,12 @@ This re-runs the full setup wizard while keeping your existing data and credenti
 
 **Agent shows wrong time?**
 → Re-run `./setup.sh --force` and set the correct timezone, or update it directly in `user_profiles` table via Supabase Studio
+
+**Heartbeat not sending messages?**
+→ Check that `heartbeat_config` has `enabled = true` for `heartbeat` (proactive) or `morning_briefing`. You can enable it via chat: *"Enable the heartbeat"*
+
+**Memory search returns nothing / vectorized: false?**
+→ Check your embedding API key in the `tools_config` table (tool_name: `embedding`). Without a valid key, memory still works but falls back to keyword search.
 
 **DB empty / Load Soul returns nothing?**
 → Re-run seed: `./setup.sh` (skips already-set config)
