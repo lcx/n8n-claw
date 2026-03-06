@@ -948,7 +948,7 @@ PRIORITIES:
 
 PREFERENCES (set_preference action):
 - Use to save user preferences like morning_briefing settings
-- Example: {"action":"set_preference","key":"morning_briefing","value":{"enabled":true,"time":"08:00"}}'),
+- Example: {{"action":"set_preference","key":"morning_briefing","value":{{"enabled":true,"time":"08:00"}}}}'),
 
   ('user_context', 'The user is {user}. Context: {ctx}')
 
