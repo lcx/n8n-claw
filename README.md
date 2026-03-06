@@ -420,6 +420,7 @@ Then restart: `docker compose up -d n8n`
 - **[n8n](https://n8n.io)** — workflow automation engine
 - **PostgreSQL** — database
 - **[PostgREST](https://postgrest.org)** — auto-generated REST API
+- **[Supabase Studio](https://supabase.com)** — database admin UI
 - **[Kong](https://konghq.com)** — API gateway
 - **[Claude](https://anthropic.com)** (Anthropic) — LLM powering the agent
 - **Telegram** — messaging interface
