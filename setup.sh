@@ -674,14 +674,20 @@ fi  # end INSTALL_MODE guard for workflows
 # ── 12. Activate agent ───────────────────────────────────────
 AGENT_ID=${WF_IDS['n8n-claw-agent']}
 if [ -n "$AGENT_ID" ]; then
-  AGENT_ACTIVATE=$(curl -s -X POST "${N8N_BASE}/api/v1/workflows/${AGENT_ID}/activate" \
-    -H "X-N8N-API-KEY: ${N8N_API_KEY}")
-  AGENT_ACT_ERR=$(echo "$AGENT_ACTIVATE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message',''))" 2>/dev/null)
-  if [ -z "$AGENT_ACT_ERR" ]; then
-    echo -e "  ${GREEN}✅ n8n-claw Agent activated${NC}"
-  else
-    echo -e "  ${YELLOW}⚠️  Agent activation: ${AGENT_ACT_ERR} — activate manually in n8n UI${NC}"
-  fi
+  for attempt in 1 2 3; do
+    AGENT_ACTIVATE=$(curl -s -X POST "${N8N_BASE}/api/v1/workflows/${AGENT_ID}/activate" \
+      -H "X-N8N-API-KEY: ${N8N_API_KEY}")
+    AGENT_ACT_ERR=$(echo "$AGENT_ACTIVATE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message',''))" 2>/dev/null)
+    if [ -z "$AGENT_ACT_ERR" ]; then
+      echo -e "  ${GREEN}✅ n8n-claw Agent activated${NC}"
+      break
+    elif echo "$AGENT_ACT_ERR" | grep -qi "too many\|retry"; then
+      sleep 2
+    else
+      echo -e "  ${YELLOW}⚠️  Agent activation: ${AGENT_ACT_ERR} — activate manually in n8n UI${NC}"
+      break
+    fi
+  done
 fi
 
 # Activate Heartbeat (disabled by default — schedule trigger runs but exits early if heartbeat_config.enabled=false)
