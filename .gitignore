@@ -8,7 +8,6 @@ node_modules/
 scripts/
 .mcp.json
 .claude/
-docs/infrastructure.md
-docs/feature-roadmap.md
+docs/
 CLAUDE.local.md
 n8n-claw-templates/
