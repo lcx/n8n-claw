@@ -1075,9 +1075,37 @@ ALTER TABLE public.mcp_registry
   ADD COLUMN IF NOT EXISTS template_type text DEFAULT 'custom',
   ADD COLUMN IF NOT EXISTS sub_workflow_id text;
 
+-- Phase 2: Credential Flow (One-Time-Link)
+CREATE TABLE IF NOT EXISTS public.credential_tokens (
+  token       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id TEXT NOT NULL,
+  cred_key    TEXT NOT NULL,
+  cred_label  TEXT,
+  cred_hint   TEXT,
+  expires_at  TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
+  used        BOOLEAN DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.template_credentials (
+  id          SERIAL PRIMARY KEY,
+  template_id TEXT NOT NULL,
+  cred_key    TEXT NOT NULL,
+  cred_value  TEXT NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(template_id, cred_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_credential_tokens_expires
+  ON public.credential_tokens (expires_at) WHERE used = false;
+CREATE INDEX IF NOT EXISTS idx_template_credentials_template
+  ON public.template_credentials (template_id);
+
 -- Roles already created at top of file (before GRANTs)
 GRANT ALL ON SCHEMA public TO supabase_admin;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO supabase_admin;
 GRANT USAGE ON SCHEMA public TO anon, service_role;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON SEQUENCE public.template_credentials_id_seq TO anon, authenticated, service_role;

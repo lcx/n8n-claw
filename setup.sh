@@ -580,7 +580,7 @@ for f in workflows/*.json; do
   [ -n "$OPENAI_CRED_ID" ] && \
     sed -i "s|REPLACE_WITH_YOUR_OPENAI_CREDENTIAL_ID\", \"name\": \"OpenAI API\"|${OPENAI_CRED_ID}\", \"name\": \"OpenAI API\"|g" "$out"
 done
-IMPORT_ORDER="mcp-client reminder-factory mcp-weather-example workflow-builder mcp-builder mcp-library-manager memory-consolidation heartbeat n8n-claw-agent"
+IMPORT_ORDER="mcp-client reminder-factory mcp-weather-example workflow-builder mcp-builder mcp-library-manager credential-form memory-consolidation heartbeat n8n-claw-agent"
 
 # Fetch existing workflows once (for upsert: update if exists, create if not)
 EXISTING_WFS=$(curl -s "${N8N_BASE}/api/v1/workflows?limit=100" \
