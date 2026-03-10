@@ -1060,26 +1060,30 @@ ctx = '${CTX}'.replace("'", "''")
 
 sql = f"""
 INSERT INTO public.agents (key, content) VALUES
-  ('mcp_instructions', 'You have MCP (Model Context Protocol) capabilities:
+  ('mcp_instructions', 'You have MCP Skills — installable capabilities powered by the Model Context Protocol (MCP):
 
 ## MCP Client (mcp_client tool)
-Call tools on MCP servers. Parameters:
+Call tools on MCP skill servers. Parameters:
 - mcp_url: Server URL
 - tool_name: Name of the tool
 - arguments: JSON object with tool parameters
 
+## Skills Library (library_manager tool)
+Install/remove pre-built skills from the catalog.
+Actions: list_templates, install_template, remove_template, add_credential
+When the user asks about available skills, ALWAYS use this tool with list_templates.
+
 ## MCP Builder (mcp_builder tool)
-ALWAYS use this when the user wants to build an MCP server or integration.
-NEVER use WorkflowBuilder for MCP servers.
-Parameter: task (description of what the MCP server should do)
+Build custom skills from scratch for APIs not in the catalog.
+Parameter: task (description of what the skill should do)
 NOTE: After build, manually deactivate + activate in n8n UI (webhook bug).
 
-## Available MCP Servers
+## Available MCP Skills
 Loaded dynamically from the mcp_registry table at runtime.
-ALWAYS prefer MCP tools over generic HTTP/Web Search when a matching server exists.
+ALWAYS prefer installed MCP skills over generic HTTP/Web Search when a matching skill exists.
 
 ## Registry
-Query all active servers: SELECT * FROM mcp_registry WHERE active = true;'),
+Query all active skills: SELECT * FROM mcp_registry WHERE active = true;'),
 
   ('tools', 'Available tools and when to use them:
 
